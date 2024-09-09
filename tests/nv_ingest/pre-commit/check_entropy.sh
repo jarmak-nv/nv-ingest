@@ -1,7 +1,8 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Exit on any error
 set -e
+set -x
 
 # List of file patterns to exclude (e.g., binary files, images)
 EXCLUDE_PATTERNS=".*\.(png|jpg|jpeg|gif|pdf|zip|exe|bin|log)$"
