@@ -4,7 +4,7 @@
 set -e
 
 # List of file patterns to exclude (e.g., binary files, images)
-EXCLUDE_PATTERNS=".*\.(png|jpg|jpeg|gif|pdf|zip|exe|bin)$"
+EXCLUDE_PATTERNS=".*\.(png|jpg|jpeg|gif|pdf|zip|exe|bin|docx|pptx)$"
 
 # Shannon entropy threshold (typically between 4.0 and 8.0)
 ENTROPY_THRESHOLD=5
@@ -48,7 +48,9 @@ for file in $files; do
       if [[ $line == "# SPDX-FileCopyrightText: Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES." ]]; then
         continue
       fi
-      echo "High entropy detected in file $file:"
+      if [[ $line == "SPDX-FileCopyrightText: Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES." ]]; then
+        continue
+      fi
       echo "$line"
       exit_code=1
     fi
