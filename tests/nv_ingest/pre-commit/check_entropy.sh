@@ -7,7 +7,7 @@ set -e
 EXCLUDE_PATTERNS=".*\.(png|jpg|jpeg|gif|pdf|zip|exe|bin)$"
 
 # Shannon entropy threshold (typically between 4.0 and 8.0)
-ENTROPY_THRESHOLD=3
+ENTROPY_THRESHOLD=4
 
 # Function to calculate shannon entropy
 calculate_entropy() {
