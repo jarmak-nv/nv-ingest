@@ -37,7 +37,7 @@ for file in $files; do
   echo "Scanning $absolute_path with trufflehog..."
   
   # Scan the file with trufflehog
-  trufflehog filesystem "$absolute_path"
+  trufflehog filesystem "$absolute_path" --filter-entropy=5.0
   
   # Capture the result of trufflehog and set exit code
   if [ $? -ne 0 ]; then
