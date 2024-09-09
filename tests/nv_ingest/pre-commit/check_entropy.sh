@@ -2,10 +2,9 @@
 
 # Exit on any error
 set -e
-set -x
 
 # List of file patterns to exclude (e.g., binary files, images)
-EXCLUDE_PATTERNS=".*\.(png|jpg|jpeg|gif|pdf|zip|exe|bin|log)$"
+EXCLUDE_PATTERNS=".*\.(png|jpg|jpeg|gif|pdf|zip|exe|bin)$"
 
 # Shannon entropy threshold (typically between 4.0 and 8.0)
 ENTROPY_THRESHOLD=4.5
