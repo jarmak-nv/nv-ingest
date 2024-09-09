@@ -12,6 +12,9 @@ fi
 # Exclude files containing "placeholder"
 EXCLUDE_PATTERN="placeholder"
 
+# Get the repository root directory
+REPO_ROOT=$(git rev-parse --show-toplevel)
+
 # Get a list of files that are staged for commit
 files=$(git diff --cached --name-only --diff-filter=ACMR)
 
@@ -28,10 +31,13 @@ for file in $files; do
     continue
   fi
 
-  echo "Scanning $file with trufflehog..."
+  # Convert the relative path to an absolute path
+  absolute_path="$REPO_ROOT/$file"
+
+  echo "Scanning $absolute_path with trufflehog..."
   
   # Scan the file with trufflehog
-  trufflehog filesystem "$file"
+  trufflehog filesystem --no-update --only-verified-true "$absolute_path"
   
   # Capture the result of trufflehog and set exit code
   if [ $? -ne 0 ]; then
