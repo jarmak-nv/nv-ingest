@@ -44,6 +44,7 @@ for file in $files; do
   while read -r line; do
     entropy=$(calculate_entropy "$line")
     if (( $(echo "$entropy > $ENTROPY_THRESHOLD" | bc -l) )); then
+      # This line flags as high entropy but it's not a problem.
       if [[ $line == "# SPDX-FileCopyrightText: Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES." ]]; then
         continue
       fi

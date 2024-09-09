@@ -7,3 +7,10 @@ repos:
         entry: ./tests/nv_ingest/pre-commit/check_entropy.sh
         language: script
         files: \.(py|yml|md|json|sh|yaml|txt)$
+  
+  - repo: local
+    hooks:
+      - id: trufflehog
+        name: Checking with Trufflehog
+        entry: ./tests/nv_ingest/pre-commit/trufflehog_pre-commit.sh
+        language: script
