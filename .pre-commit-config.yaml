@@ -2,8 +2,8 @@
 repos:
   - repo: local
     hooks:
-      - id: check-todo
-        name: Check for TODO comments
+      - id: check-entropy
+        name: Check for changes with high entropy
         entry: ./tests/nv_ingest/pre-commit/check_entropy.sh
         language: script
         files: \.(py|yml|md|json|sh|yaml|txt)$
