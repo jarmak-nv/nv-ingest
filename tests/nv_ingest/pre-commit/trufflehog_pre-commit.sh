@@ -37,7 +37,7 @@ for file in $files; do
   echo "Scanning $absolute_path with trufflehog..."
   
   # Scan the file with trufflehog
-  trufflehog filesystem --no-update --only-verified-true "$absolute_path"
+  trufflehog filesystem "$absolute_path"
   
   # Capture the result of trufflehog and set exit code
   if [ $? -ne 0 ]; then
