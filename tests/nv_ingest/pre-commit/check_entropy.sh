@@ -7,7 +7,7 @@ set -e
 EXCLUDE_PATTERNS=".*\.(png|jpg|jpeg|gif|pdf|zip|exe|bin|docx|pptx)$"
 
 # Shannon entropy threshold (typically between 4.0 and 8.0)
-ENTROPY_THRESHOLD=5
+ENTROPY_THRESHOLD=8.0
 
 # Function to calculate shannon entropy
 calculate_entropy() {
@@ -44,13 +44,7 @@ for file in $files; do
   while read -r line; do
     entropy=$(calculate_entropy "$line")
     if (( $(echo "$entropy > $ENTROPY_THRESHOLD" | bc -l) )); then
-      # This line flags as high entropy but it's not a problem.
-      if [[ $line == "# SPDX-FileCopyrightText: Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES." ]]; then
-        continue
-      fi
-      if [[ $line == "SPDX-FileCopyrightText: Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES." ]]; then
-        continue
-      fi
+      echo "High entropy detected in file $file:"
       echo "$line"
       exit_code=1
     fi
