@@ -1,0 +1,9 @@
+# .pre-commit-config.yaml
+repos:
+  - repo: local
+    hooks:
+      - id: check-todo
+        name: Check for TODO comments
+        entry: ./tests/nv_ingest/pre-commit/check_entropy.sh
+        language: script
+        files: \.(py|yml|md|json|sh|yaml|txt)$
