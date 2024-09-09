@@ -31,7 +31,7 @@ for file in $files; do
   echo "Scanning $file with trufflehog..."
   
   # Scan the file with trufflehog
-  trufflehog filesystem --no-update --only-verified-true "$file"
+  trufflehog filesystem "$file"
   
   # Capture the result of trufflehog and set exit code
   if [ $? -ne 0 ]; then
