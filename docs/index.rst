@@ -16,7 +16,7 @@ documentation for details.
    :caption: Contents
 
    # Main docs
-   readme.md
+   NV-Ingest-Overview.md
    deployment.md
    environment-config.md
    content-metadata.md
