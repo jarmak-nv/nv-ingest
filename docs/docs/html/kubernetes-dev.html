@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Developing with Kubernetes &#8212; NV-Ingest  documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=d1102ebc" />
+    <link rel="stylesheet" type="text/css" href="_static/basic.css?v=686e5160" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=27fed22d" />
+    <script src="_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <!--
+SPDX-FileCopyrightText: Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.
+All rights reserved.
+SPDX-License-Identifier: Apache-2.0
+-->
+<section id="developing-with-kubernetes">
+<h1>Developing with Kubernetes<a class="headerlink" href="#developing-with-kubernetes" title="Link to this heading">¶</a></h1>
+<p>Developing directly on Kubernetes gives us more confidence that things will work as expected in end user deployments.</p>
+<p>This page describes how to use Kubernetes generally, and how to deploy nv-ingest on a local Kubernetes clusters.</p>
+<blockquote>
+<div><p><strong>NOTE:</strong> <em>Unless otherwise noted, all commands below should be run from the root of this repo.</em></p>
+</div></blockquote>
+<section id="kubernetes-cluster">
+<h2>Kubernetes cluster<a class="headerlink" href="#kubernetes-cluster" title="Link to this heading">¶</a></h2>
+<p>To start you need a Kubernetes cluster.
+To get started we recommend using <code class="docutils literal notranslate"><span class="pre">kind</span></code> which creates a single Docker container with a Kubernetes cluster inside it.</p>
+<p>Also because this the <code class="docutils literal notranslate"><span class="pre">kind</span></code> cluster needs access to the GPUs on your system you need to install <code class="docutils literal notranslate"><span class="pre">kind-with-gpus</span></code>. The easiest way to do this is following the instructions laid out in this Github repo https://github.com/klueska/kind-with-gpus-examples/tree/master</p>
+<p>Benefits of this:</p>
+<ul class="simple">
+<li><p>allows many developers on the same system to have isolated Kubernetes clusters</p></li>
+<li><p>enables easy creation/deletion of clusters</p></li>
+</ul>
+<p>Run the following <strong>from the root of the repo</strong> to create a configuration file for your cluster.</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="l l-Scalar l-Scalar-Plain">mkdir -p ./.tmp</span>
+
+<span class="l l-Scalar l-Scalar-Plain">cat &lt;&lt;EOF &gt; ./.tmp/kind-config.yaml</span>
+<span class="l l-Scalar l-Scalar-Plain">kind</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Cluster</span>
+<span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">kind.x-k8s.io/v1alpha4</span>
+<span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">nv-ingest-${USER}</span>
+<span class="nt">nodes</span><span class="p">:</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">role</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">control-plane</span>
+<span class="w">    </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">kindest/node:v1.29.2</span>
+<span class="w">  </span><span class="p p-Indicator">{{</span><span class="nv">- range \$gpu</span><span class="w"> </span><span class="p p-Indicator">:</span><span class="nv">= until numGPUs</span><span class="w"> </span><span class="p p-Indicator">}}</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">role</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">worker</span>
+<span class="w">    </span><span class="nt">extraMounts</span><span class="p">:</span>
+<span class="w">      </span><span class="c1"># We inject all NVIDIA GPUs using the nvidia-container-runtime.</span>
+<span class="w">      </span><span class="c1"># This requires &#39;accept-nvidia-visible-devices-as-volume-mounts = true&#39; be set</span>
+<span class="w">      </span><span class="c1"># in &#39;/etc/nvidia-container-runtime/config.toml&#39;</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">hostPath</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/dev/null</span>
+<span class="w">        </span><span class="nt">containerPath</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/var/run/nvidia-container-devices/{{ \$gpu }}</span>
+<span class="w">  </span><span class="p p-Indicator">{{</span><span class="nv">- end</span><span class="w"> </span><span class="p p-Indicator">}}</span>
+<span class="l l-Scalar l-Scalar-Plain">EOF</span>
+</pre></div>
+</div>
+<p>Then use the <code class="docutils literal notranslate"><span class="pre">nvkind</span></code> CLI to create your cluster.</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>nvkind<span class="w"> </span>cluster<span class="w"> </span>create<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--config-template<span class="w"> </span>./.tmp/kind-config.yaml
+</pre></div>
+</div>
+<p>You should see output like this:</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>Creating<span class="w"> </span>cluster<span class="w"> </span><span class="s2">&quot;jdyer&quot;</span><span class="w"> </span>...
+<span class="w"> </span>✓<span class="w"> </span>Ensuring<span class="w"> </span>node<span class="w"> </span>image<span class="w"> </span><span class="o">(</span>kindest/node:v1.27.11<span class="o">)</span><span class="w"> </span>🖼
+<span class="w"> </span>✓<span class="w"> </span>Preparing<span class="w"> </span>nodes<span class="w"> </span>📦
+<span class="w"> </span>✓<span class="w"> </span>Writing<span class="w"> </span>configuration<span class="w"> </span>📜
+<span class="w"> </span>✓<span class="w"> </span>Starting<span class="w"> </span>control-plane<span class="w"> </span>🕹️
+<span class="w"> </span>✓<span class="w"> </span>Installing<span class="w"> </span>CNI<span class="w"> </span>🔌
+<span class="w"> </span>✓<span class="w"> </span>Installing<span class="w"> </span>StorageClass<span class="w"> </span>💾
+Set<span class="w"> </span>kubectl<span class="w"> </span>context<span class="w"> </span>to<span class="w"> </span><span class="s2">&quot;kind-jdyer&quot;</span>
+You<span class="w"> </span>can<span class="w"> </span>now<span class="w"> </span>use<span class="w"> </span>your<span class="w"> </span>cluster<span class="w"> </span>with:
+
+kubectl<span class="w"> </span>cluster-info<span class="w"> </span>--context<span class="w"> </span>kind-jdyer
+
+Have<span class="w"> </span>a<span class="w"> </span>nice<span class="w"> </span>day!<span class="w"> </span>👋
+</pre></div>
+</div>
+<p>You can list clusters on the system with <code class="docutils literal notranslate"><span class="pre">kind</span> <span class="pre">get</span> <span class="pre">clusters</span></code>.</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>kind<span class="w"> </span>get<span class="w"> </span>clusters
+<span class="c1"># jdyer</span>
+</pre></div>
+</div>
+<p>You can also just use <code class="docutils literal notranslate"><span class="pre">docker</span> <span class="pre">ps</span></code> to see the kind container.</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>docker<span class="w"> </span>ps<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>kind
+<span class="c1"># aaf5216a3cc8   kindest/node:v1.27.11  &quot;/usr/local/bin/entr…&quot;   44 seconds ago   Up 42 seconds 127.0.0.1:45099-&gt;6443/tcp jdyer-control-plane</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">kind</span> <span class="pre">create</span> <span class="pre">cluster</span></code> will do the following:</p>
+<ul class="simple">
+<li><p>add a context for this cluster to <code class="docutils literal notranslate"><span class="pre">${HOME}/.kube/config</span></code>, the default config file used by tools like <code class="docutils literal notranslate"><span class="pre">kubectl</span></code></p></li>
+<li><p>change the default context to that one</p></li>
+</ul>
+<p>You should be able to use <code class="docutils literal notranslate"><span class="pre">kubectl</span></code> immediately, and it should be pointed at that cluster you just created.</p>
+<p>For example, to ensure the cluster was set up successfully, try listing nodes.</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>kubectl<span class="w"> </span>get<span class="w"> </span>nodes
+</pre></div>
+</div>
+<p>If that worked, you should see a single node, like this:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>NAME                  STATUS   ROLES           AGE   VERSION
+jdyer-control-plane   Ready    control-plane   63s   v1.27.11
+</pre></div>
+</div>
+<p>Note: All of the containers created inside your Kubernetes cluster will not show up when you run <code class="docutils literal notranslate"><span class="pre">docker</span> <span class="pre">ps</span></code> as they are nested within a separate containerd namespace.</p>
+<p>See “debugging tools” in the “Troubleshooting” section below.</p>
+</section>
+<section id="skaffold">
+<h2>Skaffold<a class="headerlink" href="#skaffold" title="Link to this heading">¶</a></h2>
+<p>Now that you have a Kubernetes cluster you can use <code class="docutils literal notranslate"><span class="pre">skaffold</span></code> to build and deploy your development environment.</p>
+<p>Skaffold does a few things for you in a single command:</p>
+<ul class="simple">
+<li><p>Build containers from the current directory (via <code class="docutils literal notranslate"><span class="pre">docker</span> <span class="pre">build</span></code>).</p></li>
+<li><p>Install the retriever-ingest helm charts (via <code class="docutils literal notranslate"><span class="pre">helm</span> <span class="pre">install</span></code>).</p></li>
+<li><p>Apply additional Kubernetes manifests (via <code class="docutils literal notranslate"><span class="pre">kustomize</span></code>).</p></li>
+<li><p>Hot reloading - skaffold watches your local directory for changes and syncs them into the Kubernetes container.</p>
+<ul>
+<li><p><em>for details on this, see “Hot reloading” below (<a class="reference internal" href="#hot-reloading"><span class="xref myst">link</span></a>)</em></p></li>
+</ul>
+</li>
+<li><p>Port forwards the -ingest service to the host.</p></li>
+</ul>
+<section id="directory-structure">
+<h3>Directory structure<a class="headerlink" href="#directory-structure" title="Link to this heading">¶</a></h3>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">skaffold/sensitive/</span></code> contains any secrets or manifests you want deployed to your cluster, but not checked into git, as your local cluster is unlikely to have ESO installed. If it does, feel free to use <code class="docutils literal notranslate"><span class="pre">kind:</span> <span class="pre">ExternalSecret</span></code> instead.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">skaffold/components</span></code> contains any k8s manifests you want deployed in any skaffold file. The paths are relative and can be used in either <code class="docutils literal notranslate"><span class="pre">kustomize</span></code> or <code class="docutils literal notranslate"><span class="pre">rawYaml</span></code> formats:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">manifests</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">rawYaml</span><span class="p">:</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">sensitive/*.yaml</span>
+<span class="w">  </span><span class="nt">kustomize</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">paths</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">components/elasticsearch</span>
+</pre></div>
+</div>
+</li>
+<li><p>If adding a new service, try getting a helm object first. If none exists, you may have to encapsulate it with your k8s manifests in <code class="docutils literal notranslate"><span class="pre">skaffold/components</span></code>. We are a k8s shop, so manifest writing may be required from time to time.</p></li>
+</ul>
+</section>
+<section id="prerequisites">
+<h3>Prerequisites<a class="headerlink" href="#prerequisites" title="Link to this heading">¶</a></h3>
+<section id="add-helm-repos">
+<h4>Add Helm repos<a class="headerlink" href="#add-helm-repos" title="Link to this heading">¶</a></h4>
+<p>The retriever-ingest service’s deployment requires pulling in configurations for other services from third-party sources,
+e.g. Elasticsearch, OpenTelemetry, and Postgres.</p>
+<p>The first time you try to deploy this project to a local Kubernetes, you may need to tell
+your local version of <code class="docutils literal notranslate"><span class="pre">Helm</span></code> (a package manager for Kubernetes configurations) where to find those
+third-party things, by running something like the following.</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>helm<span class="w"> </span>repo<span class="w"> </span>add<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>nvdp<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>https://nvidia.github.io/k8s-device-plugin
+
+helm<span class="w"> </span>repo<span class="w"> </span>add<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>zipkin<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>https://zipkin.io/zipkin-helm
+
+helm<span class="w"> </span>repo<span class="w"> </span>add<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>opentelemetry<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>https://open-telemetry.github.io/opentelemetry-helm-charts
+
+helm<span class="w"> </span>repo<span class="w"> </span>add<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>nvidia<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>https://helm.ngc.nvidia.com/nvidia
+
+helm<span class="w"> </span>repo<span class="w"> </span>add<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>bitnami<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>https://charts.bitnami.com/bitnami
+</pre></div>
+</div>
+<p>For the full list of repositories, see the <code class="docutils literal notranslate"><span class="pre">dependencies</span></code> section in <a class="reference internal" href="#../../helm/Chart.yaml"><span class="xref myst">this project’s Chart.yaml</span></a>.</p>
+</section>
+<section id="nvidia-gpu-support">
+<h4>Nvidia GPU Support<a class="headerlink" href="#nvidia-gpu-support" title="Link to this heading">¶</a></h4>
+<p>In order for the deployed kubernetes pods to access the Nvidia GPU resources the <a class="reference external" href="https://github.com/NVIDIA/k8s-device-plugin">Nvidia k8s-device-plugin</a> must be installed. There are a multitude of configurations for this plugin but for a straight forward route to start development you can simply run.</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>kubectl<span class="w"> </span>create<span class="w"> </span>-f<span class="w"> </span>https://raw.githubusercontent.com/NVIDIA/k8s-device-plugin/v0.15.0/deployments/static/nvidia-device-plugin.yml
+</pre></div>
+</div>
+</section>
+<section id="create-an-image-pull-secret">
+<h4>Create an image pull secret<a class="headerlink" href="#create-an-image-pull-secret" title="Link to this heading">¶</a></h4>
+<p>You’ll also need to provide a Kubernetes Secret with credentials to pull NVIDIA-private Docker images.</p>
+<p>For short-lived development clusters, just use your own individual credentials.</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span><span class="nv">DOCKER_CONFIG_JSON</span><span class="o">=</span><span class="k">$(</span>
+<span class="w">    </span>cat<span class="w"> </span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">HOME</span><span class="si">}</span><span class="s2">/.docker/config.json&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span><span class="p">|</span><span class="w"> </span>base64<span class="w"> </span>-w<span class="w"> </span><span class="m">0</span>
+<span class="k">)</span>
+
+cat<span class="w"> </span><span class="s">&lt;&lt;EOF &gt; ./skaffold/sensitive/imagepull.yaml</span>
+<span class="s">apiVersion: v1</span>
+<span class="s">kind: Secret</span>
+<span class="s">metadata:</span>
+<span class="s">  name: nvcrimagepullsecret</span>
+<span class="s">type: kubernetes.io/dockerconfigjson</span>
+<span class="s">data:</span>
+<span class="s">  .dockerconfigjson: ${DOCKER_CONFIG_JSON}</span>
+<span class="s">EOF</span>
+</pre></div>
+</div>
+<p>An NGC personal API key is needed to access models and images hosted on NGC.
+Make sure that you have followed the steps of <em><a class="reference internal" href="#./index.md#ensure-you-have-access-to-ngc"><span class="xref myst">Ensure you have access to NGC</span></a></em>.
+Next, store the key in an environment variable:</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span><span class="nb">export</span><span class="w"> </span><span class="nv">NGC_API_KEY</span><span class="o">=</span><span class="s2">&quot;&lt;YOUR_KEY_HERE&gt;&quot;</span>
+</pre></div>
+</div>
+<p>Then create the secret manifest with:</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>kubectl<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>ngcapisecrets<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--from-literal<span class="o">=</span><span class="nv">ngc_api_key</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">NGC_API_KEY</span><span class="si">}</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--dry-run<span class="o">=</span>client<span class="w"> </span>-o<span class="w"> </span>yaml<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>&gt;<span class="w"> </span>skaffold/sensitive/ngcapi.yaml
+</pre></div>
+</div>
+</section>
+</section>
+<section id="deploy-the-service">
+<h3>Deploy the service<a class="headerlink" href="#deploy-the-service" title="Link to this heading">¶</a></h3>
+<p>Run the following to deploy the retriever-ingest to your cluster.</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>skaffold<span class="w"> </span>dev<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-v<span class="w"> </span>info<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-f<span class="w"> </span>./skaffold/nv-ingest.skaffold.yaml<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--kube-context<span class="w"> </span><span class="s2">&quot;kind-nv-ingest-</span><span class="si">${</span><span class="nv">USER</span><span class="si">}</span><span class="s2">&quot;</span>
+</pre></div>
+</div>
+<details><summary>explanation of those flags (click me)</summary>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">-v</span> <span class="pre">info</span></code> = print INFO-level and above logs from <code class="docutils literal notranslate"><span class="pre">skaffold</span></code> and the tools it calls (like <code class="docutils literal notranslate"><span class="pre">helm</span></code> or <code class="docutils literal notranslate"><span class="pre">kustomize</span></code>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-f</span> <span class="pre">./skaffold/nv-ingest.skaffold.yaml</span></code> = use configuration specific to retriever-ingest</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--tail=false</span></code> = don’t flood your console with all the logs from the deployed containers</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--kube-context</span> <span class="pre">&quot;kind-${USER}&quot;</span></code> = target the specific Kubernetes cluster you created with <code class="docutils literal notranslate"><span class="pre">kind</span></code> above</p></li>
+</ul>
+</details>
+<p><code class="docutils literal notranslate"><span class="pre">skaffold</span> <span class="pre">dev</span></code> watches your local files and automatically redeploys the app as you change those files.
+It also holds control in the terminal you run it in, and handles shutting down the pods in Kubernetes when you <code class="docutils literal notranslate"><span class="pre">Ctrl</span> <span class="pre">+</span> <span class="pre">C</span></code> out of it.</p>
+<p>You should see output similar to this:</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>Generating<span class="w"> </span>tags...
+<span class="w"> </span>-<span class="w"> </span>...
+Checking<span class="w"> </span>cache...
+<span class="w"> </span>-<span class="w"> </span>...
+Tags<span class="w"> </span>used<span class="w"> </span><span class="k">in</span><span class="w"> </span>deployment:
+<span class="w"> </span>-<span class="w"> </span>...
+Starting<span class="w"> </span>deploy...
+Loading<span class="w"> </span>images<span class="w"> </span>into<span class="w"> </span>kind<span class="w"> </span>cluster<span class="w"> </span>nodes...
+<span class="w"> </span>-<span class="w"> </span>...
+Waiting<span class="w"> </span><span class="k">for</span><span class="w"> </span>deployments<span class="w"> </span>to<span class="w"> </span>stabilize...
+Deployments<span class="w"> </span>stabilized<span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="m">23</span>.08<span class="w"> </span>seconds
+Watching<span class="w"> </span><span class="k">for</span><span class="w"> </span>changes...
+</pre></div>
+</div>
+<p>When you run this command, <code class="docutils literal notranslate"><span class="pre">skaffold</span> <span class="pre">dev</span></code> finds a random open port on the system and exposes the retriever-ingest service on that port (<a class="reference external" href="https://skaffold.dev/docs/port-forwarding/">skaffold docs</a>).</p>
+<p>You can find that port in <code class="docutils literal notranslate"><span class="pre">skaffold</span></code>’s logs, in a statement like this:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>Port<span class="w"> </span>forwarding<span class="w"> </span>Service/nv-ingest<span class="w"> </span><span class="k">in</span><span class="w"> </span>namespace<span class="w"> </span>,<span class="w"> </span>remote<span class="w"> </span>port<span class="w"> </span>http<span class="w"> </span>-&gt;<span class="w"> </span>http://0.0.0.0:4503
+</pre></div>
+</div>
+<p>Alternatively, you can obtain it like this:</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span><span class="nv">NV_INGEST_MS_PORT</span><span class="o">=</span><span class="k">$(</span>
+<span class="w">    </span>ps<span class="w"> </span>aux<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>-E<span class="w"> </span><span class="s2">&quot;kind\-</span><span class="si">${</span><span class="nv">USER</span><span class="si">}</span><span class="s2"> port-forward .*Service/nv-ingest&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>-o<span class="w"> </span>-E<span class="w"> </span><span class="s1">&#39;[0-9]+:http&#39;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span><span class="p">|</span><span class="w"> </span>cut<span class="w"> </span>-d<span class="w"> </span><span class="s1">&#39;:&#39;</span><span class="w"> </span>-f1
+<span class="k">)</span>
+</pre></div>
+</div>
+<p>To confirm that the service is deployed and working, issue a request against the port you set up port-forwarding to above.</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span><span class="nv">API_HOST</span><span class="o">=</span><span class="s2">&quot;http://localhost:</span><span class="si">${</span><span class="nv">NV_INGEST_MS_PORT</span><span class="si">}</span><span class="s2">&quot;</span>
+
+curl<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-i<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-X<span class="w"> </span>GET<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">API_HOST</span><span class="si">}</span><span class="s2">/health&quot;</span>
+</pre></div>
+</div>
+<p>Additionally, running <code class="docutils literal notranslate"><span class="pre">skaffold</span> <span class="pre">verify</span></code> in a new terminal will run verification tests against the service (i.e. <a class="reference external" href="https://skaffold.dev/docs/verify/">integration tests</a>). These are very lightweight health checks, and should not be confused with actual integration tests.</p>
+</section>
+</section>
+<section id="clean-up">
+<h2>Clean Up<a class="headerlink" href="#clean-up" title="Link to this heading">¶</a></h2>
+<p>To destroy the entire Kubernetes cluster, run the following.</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>kind<span class="w"> </span>delete<span class="w"> </span>cluster<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--name<span class="w"> </span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">USER</span><span class="si">}</span><span class="s2">&quot;</span>
+</pre></div>
+</div>
+</section>
+<section id="troubleshooting">
+<h2>Troubleshooting<a class="headerlink" href="#troubleshooting" title="Link to this heading">¶</a></h2>
+<section id="debugging-tools">
+<h3>Debugging Tools<a class="headerlink" href="#debugging-tools" title="Link to this heading">¶</a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">kubectl</span></code> is the official CLI for Kubernetes, and supports a lot of useful functionality.</p>
+<p>For example, to get a shell inside the <code class="docutils literal notranslate"><span class="pre">nv-ingest-ms-runtime</span></code> container in your deployment, run the following:</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span><span class="nv">NV_INGEST_POD</span><span class="o">=</span><span class="k">$(</span>
+<span class="w">    </span>kubectl<span class="w"> </span>get<span class="w"> </span>pods<span class="w"> </span><span class="se">\</span>
+<span class="w">        </span>--context<span class="w"> </span><span class="s2">&quot;kind-</span><span class="si">${</span><span class="nv">USER</span><span class="si">}</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">        </span>--namespace<span class="w"> </span>default<span class="w"> </span><span class="se">\</span>
+<span class="w">        </span>-l<span class="w"> </span><span class="s1">&#39;app.kubernetes.io/instance=nv-ingest-ms-runtime&#39;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">        </span>--no-headers<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span><span class="p">|</span><span class="w"> </span>awk<span class="w"> </span><span class="s1">&#39;{print $1}&#39;</span>
+<span class="k">)</span>
+kubectl<span class="w"> </span><span class="nb">exec</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--context<span class="w"> </span><span class="s2">&quot;kind-</span><span class="si">${</span><span class="nv">USER</span><span class="si">}</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--namespace<span class="w"> </span>default<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>pod/<span class="si">${</span><span class="nv">NV_INGEST_POD</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-i<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-t<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--<span class="w"> </span>sh
+</pre></div>
+</div>
+<p>For an interactive, live-updating experience, try <code class="docutils literal notranslate"><span class="pre">k9s</span></code>.
+To launch it, just run <code class="docutils literal notranslate"><span class="pre">k9s</span></code>.</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>k9s
+</pre></div>
+</div>
+<p>You should see something like the following.</p>
+<p><img alt="k9s example" src="media/k9s-example.png" />{width=80%}</p>
+<p>For details on how to use it, see https://k9scli.io/topics/commands/.</p>
+</section>
+<section id="installing-helm-repositories">
+<h3>Installing Helm Repositories<a class="headerlink" href="#installing-helm-repositories" title="Link to this heading">¶</a></h3>
+<p>You may encounter an error like this:</p>
+<blockquote>
+<div><p><em>Error: no repository definition for https://helm.dask.org. Please add the missing repos via ‘helm repo add’</em></p>
+</div></blockquote>
+<p>That indicates that your local installation of <code class="docutils literal notranslate"><span class="pre">Helm</span></code> (sort of a package manager for Kubernetes configurations) doesn’t know
+how to access a remote repository containing Kubernetes configurations.</p>
+<p>As that error message says, run <code class="docutils literal notranslate"><span class="pre">help</span> <span class="pre">repo</span> <span class="pre">add</span></code> with that URL and an informative name.</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>helm<span class="w"> </span>repo<span class="w"> </span>add<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>bitnami<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>https://charts.bitnami.com/bitnami
+
+helm<span class="w"> </span>repo<span class="w"> </span>add<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>tika<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>https://apache.jfrog.io/artifactory/tika
+</pre></div>
+</div>
+</section>
+<section id="getting-more-logs-from-skaffold">
+<h3>Getting more logs from <code class="docutils literal notranslate"><span class="pre">skaffold</span></code><a class="headerlink" href="#getting-more-logs-from-skaffold" title="Link to this heading">¶</a></h3>
+<p>You may encounter an error like this:</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>Generating<span class="w"> </span>tags...
+<span class="w"> </span>-<span class="w"> </span>retrieval-ms<span class="w"> </span>-&gt;<span class="w"> </span>retrieval-ms:f181a78-dirty
+Checking<span class="w"> </span>cache...
+<span class="w"> </span>-<span class="w"> </span>retrieval-ms:<span class="w"> </span>Found<span class="w"> </span>Locally
+Cleaning<span class="w"> </span>up...
+<span class="w"> </span>-<span class="w"> </span>No<span class="w"> </span>resources<span class="w"> </span>found
+building<span class="w"> </span>helm<span class="w"> </span>dependencies:<span class="w"> </span><span class="nb">exit</span><span class="w"> </span>status<span class="w"> </span><span class="m">1</span>
+</pre></div>
+</div>
+<p>Seeing only “building helm dependencies” likely means you ran <code class="docutils literal notranslate"><span class="pre">skaffold</span> <span class="pre">dev</span></code> or <code class="docutils literal notranslate"><span class="pre">skaffold</span> <span class="pre">run</span></code> in a fairly quiet mode.</p>
+<p>Re-run those commands with something like <code class="docutils literal notranslate"><span class="pre">-v</span> <span class="pre">info</span></code> or <code class="docutils literal notranslate"><span class="pre">-v</span> <span class="pre">debug</span></code> to get more information about what specifically failed.</p>
+</section>
+</section>
+<section id="references">
+<h2>References<a class="headerlink" href="#references" title="Link to this heading">¶</a></h2>
+<ul class="simple">
+<li><p>Helm quickstart: https://helm.sh/docs/intro/quickstart/</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">kind</span></code> docs: https://kind.sigs.k8s.io/</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">skaffold</span></code> docs: https://skaffold.dev/docs/</p></li>
+</ul>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">NV-Ingest</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="deployment.html">Launch nv-ingest micro-service(s)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="environment-config.html"><strong>Environment Configuration Variables</strong></a></li>
+<li class="toctree-l1"><a class="reference internal" href="content-metadata.html">Example text extracts for multimodal_test.pdf:</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ngc-api-key.html">Authenticating local Docker with NGC</a></li>
+<li class="toctree-l1"><a class="reference internal" href="nv-ingest_cli.html">Example document submission to the nv-ingest-ms-runtime service</a></li>
+<li class="toctree-l1"><a class="reference internal" href="nv-ingest_cli.html#command-line-dataset-creation-with-enumeration-and-sampling">Command line dataset creation with enumeration and sampling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="nv-ingest_cli.html#options">Options</a></li>
+<li class="toctree-l1"><a class="reference internal" href="nv-ingest_cli.html#command-line-interface-for-the-image-viewer-application-displays-paginated-images-from-a-json-file">Command line interface for the Image Viewer application, displays paginated images from a JSON file</a></li>
+<li class="toctree-l1"><a class="reference internal" href="telemetry.html">Telemetry</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2024, NVIDIA.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.1.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="_sources/kubernetes-dev.md.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

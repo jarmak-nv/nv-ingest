@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Example document submission to the nv-ingest-ms-runtime service &#8212; NV-Ingest  documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=d1102ebc" />
+    <link rel="stylesheet" type="text/css" href="_static/basic.css?v=686e5160" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=27fed22d" />
+    <script src="_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Telemetry" href="telemetry.html" />
+    <link rel="prev" title="Authenticating local Docker with NGC" href="ngc-api-key.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <!--
+SPDX-FileCopyrightText: Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.
+All rights reserved.
+SPDX-License-Identifier: Apache-2.0
+-->
+<p>After installing the Python dependencies, you’ll be able to use the nv-ingest-cli tool.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>nv-ingest-cli<span class="w"> </span>--help
+Usage:<span class="w"> </span>nv-ingest-cli<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
+
+Options:
+<span class="w">  </span>--batch_size<span class="w"> </span>INTEGER<span class="w">            </span>Batch<span class="w"> </span>size<span class="w"> </span><span class="o">(</span>must<span class="w"> </span>be<span class="w"> </span>&gt;<span class="o">=</span><span class="w"> </span><span class="m">1</span><span class="o">)</span>.<span class="w">  </span><span class="o">[</span>default:<span class="w"> </span><span class="m">10</span><span class="o">]</span>
+<span class="w">  </span>--doc<span class="w"> </span>PATH<span class="w">                      </span>Add<span class="w"> </span>a<span class="w"> </span>new<span class="w"> </span>document<span class="w"> </span>to<span class="w"> </span>be<span class="w"> </span>processed<span class="w"> </span><span class="o">(</span>supports
+<span class="w">                                  </span>multiple<span class="o">)</span>.
+<span class="w">  </span>--dataset<span class="w"> </span>PATH<span class="w">                  </span>Path<span class="w"> </span>to<span class="w"> </span>a<span class="w"> </span>dataset<span class="w"> </span>definition<span class="w"> </span>file.
+<span class="w">  </span>--client<span class="w"> </span><span class="o">[</span>REST<span class="p">|</span>REDIS<span class="p">|</span>KAFKA<span class="o">]</span><span class="w">     </span>Client<span class="w"> </span>type.<span class="w">  </span><span class="o">[</span>default:<span class="w"> </span>REDIS<span class="o">]</span>
+<span class="w">  </span>--client_host<span class="w"> </span>TEXT<span class="w">              </span>DNS<span class="w"> </span>name<span class="w"> </span>or<span class="w"> </span>URL<span class="w"> </span><span class="k">for</span><span class="w"> </span>the<span class="w"> </span>endpoint.
+<span class="w">  </span>--client_port<span class="w"> </span>INTEGER<span class="w">           </span>Port<span class="w"> </span><span class="k">for</span><span class="w"> </span>the<span class="w"> </span>client<span class="w"> </span>endpoint.
+<span class="w">  </span>--client_kwargs<span class="w"> </span>TEXT<span class="w">            </span>Additional<span class="w"> </span>arguments<span class="w"> </span>to<span class="w"> </span>pass<span class="w"> </span>to<span class="w"> </span>the<span class="w"> </span>client.
+<span class="w">  </span>--concurrency_n<span class="w"> </span>INTEGER<span class="w">         </span>Number<span class="w"> </span>of<span class="w"> </span>inflight<span class="w"> </span><span class="nb">jobs</span><span class="w"> </span>to<span class="w"> </span>maintain<span class="w"> </span>at<span class="w"> </span>one
+<span class="w">                                  </span>time.<span class="w">  </span><span class="o">[</span>default:<span class="w"> </span><span class="m">10</span><span class="o">]</span>
+<span class="w">  </span>--document_processing_timeout<span class="w"> </span>INTEGER
+<span class="w">                                  </span>Timeout<span class="w"> </span>when<span class="w"> </span>waiting<span class="w"> </span><span class="k">for</span><span class="w"> </span>a<span class="w"> </span>document<span class="w"> </span>to<span class="w"> </span>be
+<span class="w">                                  </span>processed.<span class="w">  </span><span class="o">[</span>default:<span class="w"> </span><span class="m">10</span><span class="o">]</span>
+<span class="w">  </span>--dry_run<span class="w">                       </span>Perform<span class="w"> </span>a<span class="w"> </span>dry<span class="w"> </span>run<span class="w"> </span>without<span class="w"> </span>executing<span class="w"> </span>actions.
+<span class="w">  </span>--output_directory<span class="w"> </span>PATH<span class="w">         </span>Output<span class="w"> </span>directory<span class="w"> </span><span class="k">for</span><span class="w"> </span>results.
+<span class="w">  </span>--log_level<span class="w"> </span><span class="o">[</span>DEBUG<span class="p">|</span>INFO<span class="p">|</span>WARNING<span class="p">|</span>ERROR<span class="p">|</span>CRITICAL<span class="o">]</span>
+<span class="w">                                  </span>Log<span class="w"> </span>level.<span class="w">  </span><span class="o">[</span>default:<span class="w"> </span>INFO<span class="o">]</span>
+<span class="w">  </span>--shuffle_dataset<span class="w">               </span>Shuffle<span class="w"> </span>the<span class="w"> </span>dataset<span class="w"> </span>before<span class="w"> </span>processing.
+<span class="w">                                  </span><span class="o">[</span>default:<span class="w"> </span>True<span class="o">]</span>
+<span class="w">  </span>--task<span class="w"> </span>TEXT<span class="w">                     </span>Task<span class="w"> </span>definitions<span class="w"> </span><span class="k">in</span><span class="w"> </span>JSON<span class="w"> </span>format,<span class="w"> </span>allowing<span class="w"> </span>multiple<span class="w"> </span>tasks<span class="w"> </span>to<span class="w"> </span>be<span class="w"> </span>configured<span class="w"> </span>by<span class="w"> </span>repeating<span class="w"> </span>this<span class="w"> </span>option.
+<span class="w">                                  </span>Each<span class="w"> </span>task<span class="w"> </span>must<span class="w"> </span>be<span class="w"> </span>specified<span class="w"> </span>with<span class="w"> </span>its<span class="w"> </span><span class="nb">type</span><span class="w"> </span>and<span class="w"> </span>corresponding<span class="w"> </span>options<span class="w"> </span><span class="k">in</span><span class="w"> </span>the<span class="w"> </span><span class="s1">&#39;[task_id]:{json_options}&#39;</span><span class="w"> </span>format.
+
+<span class="w">                                  </span>Example:
+<span class="w">                                    </span>--task<span class="w"> </span><span class="s1">&#39;split:{&quot;split_by&quot;:&quot;page&quot;, &quot;split_length&quot;:10}&#39;</span>
+<span class="w">                                    </span>--task<span class="w"> </span><span class="s1">&#39;extract:{&quot;document_type&quot;:&quot;pdf&quot;, &quot;extract_text&quot;:true}&#39;</span>
+<span class="w">                                    </span>--task<span class="w"> </span><span class="s1">&#39;extract:{&quot;document_type&quot;:&quot;pdf&quot;, &quot;extract_method&quot;:&quot;doughnut&quot;}&#39;</span>
+<span class="w">                                    </span>--task<span class="w"> </span><span class="s1">&#39;extract:{&quot;document_type&quot;:&quot;pdf&quot;, &quot;extract_method&quot;:&quot;unstructured_io&quot;}&#39;</span>
+<span class="w">                                    </span>--task<span class="w"> </span><span class="s1">&#39;extract:{&quot;document_type&quot;:&quot;docx&quot;, &quot;extract_text&quot;:true, &quot;extract_images&quot;:true}&#39;</span>
+<span class="w">                                    </span>--task<span class="w"> </span><span class="s1">&#39;store:{&quot;content_type&quot;:&quot;image&quot;, &quot;store_method&quot;:&quot;minio&quot;, &quot;endpoint&quot;:&quot;minio:9000&quot;}&#39;</span>
+<span class="w">                                    </span>--task<span class="w"> </span><span class="s1">&#39;store:{&quot;content_type&quot;:&quot;image&quot;, &quot;store_method&quot;:&quot;minio&quot;, &quot;endpoint&quot;:&quot;minio:9000&quot;, &quot;text_depth&quot;: &quot;page&quot;}&#39;</span>
+<span class="w">                                    </span>--task<span class="w"> </span><span class="s1">&#39;caption:{}&#39;</span>
+
+<span class="w">                                  </span>Tasks<span class="w"> </span>and<span class="w"> </span>Options:
+<span class="w">                                  </span>-<span class="w"> </span>split:<span class="w"> </span>Divides<span class="w"> </span>documents<span class="w"> </span>according<span class="w"> </span>to<span class="w"> </span>specified<span class="w"> </span>criteria.
+<span class="w">                                      </span>Options:
+<span class="w">                                      </span>-<span class="w"> </span>split_by<span class="w"> </span><span class="o">(</span>str<span class="o">)</span>:<span class="w"> </span>Criteria<span class="w"> </span><span class="o">(</span><span class="s1">&#39;page&#39;</span>,<span class="w"> </span><span class="s1">&#39;size&#39;</span>,<span class="w"> </span><span class="s1">&#39;word&#39;</span>,<span class="w"> </span><span class="s1">&#39;sentence&#39;</span><span class="o">)</span>.<span class="w"> </span>No<span class="w"> </span>default.
+<span class="w">                                      </span>-<span class="w"> </span>split_length<span class="w"> </span><span class="o">(</span>int<span class="o">)</span>:<span class="w"> </span>Segment<span class="w"> </span>length.<span class="w"> </span>No<span class="w"> </span>default.
+<span class="w">                                      </span>-<span class="w"> </span>split_overlap<span class="w"> </span><span class="o">(</span>int<span class="o">)</span>:<span class="w"> </span>Segment<span class="w"> </span>overlap.<span class="w"> </span>No<span class="w"> </span>default.
+<span class="w">                                      </span>-<span class="w"> </span>max_character_length<span class="w"> </span><span class="o">(</span>int<span class="o">)</span>:<span class="w"> </span>Maximum<span class="w"> </span>segment<span class="w"> </span>character<span class="w"> </span>count.<span class="w"> </span>No<span class="w"> </span>default.
+<span class="w">                                      </span>-<span class="w"> </span>sentence_window_size<span class="w"> </span><span class="o">(</span>int<span class="o">)</span>:<span class="w"> </span>Sentence<span class="w"> </span>window<span class="w"> </span>size.<span class="w"> </span>No<span class="w"> </span>default.
+
+<span class="w">                                  </span>-<span class="w"> </span>extract:<span class="w"> </span>Extracts<span class="w"> </span>content<span class="w"> </span>from<span class="w"> </span>documents,<span class="w"> </span>customizable<span class="w"> </span>per<span class="w"> </span>document<span class="w"> </span>type.
+<span class="w">                                      </span>Can<span class="w"> </span>be<span class="w"> </span>specified<span class="w"> </span>multiple<span class="w"> </span><span class="nb">times</span><span class="w"> </span><span class="k">for</span><span class="w"> </span>different<span class="w"> </span><span class="s1">&#39;document_type&#39;</span><span class="w"> </span>values.
+<span class="w">                                      </span>Options:
+<span class="w">                                      </span>-<span class="w"> </span>document_type<span class="w"> </span><span class="o">(</span>str<span class="o">)</span>:<span class="w"> </span>Document<span class="w"> </span>format<span class="w"> </span><span class="o">(</span><span class="s1">&#39;pdf&#39;</span>,<span class="w"> </span><span class="s1">&#39;docx&#39;</span>,<span class="w"> </span><span class="s1">&#39;pptx&#39;</span>,<span class="w"> </span><span class="s1">&#39;html&#39;</span>,<span class="w"> </span><span class="s1">&#39;xml&#39;</span>,<span class="w"> </span><span class="s1">&#39;excel&#39;</span>,<span class="w"> </span><span class="s1">&#39;csv&#39;</span>,<span class="w"> </span><span class="s1">&#39;parquet&#39;</span><span class="o">)</span>.<span class="w"> </span>Required.
+<span class="w">                                      </span>-<span class="w"> </span>text_depth<span class="w"> </span><span class="o">(</span>str<span class="o">)</span>:<span class="w"> </span>Depth<span class="w"> </span>at<span class="w"> </span>which<span class="w"> </span>text<span class="w"> </span>parsing<span class="w"> </span>occurs<span class="w"> </span><span class="o">(</span><span class="s1">&#39;document&#39;</span>,<span class="w"> </span><span class="s1">&#39;page&#39;</span><span class="o">)</span>,<span class="w"> </span>additional<span class="w"> </span>text_depths<span class="w"> </span>are<span class="w"> </span>partially<span class="w"> </span>supported<span class="w"> </span>and<span class="w"> </span>depend<span class="w"> </span>on<span class="w"> </span>the<span class="w"> </span>specified<span class="w"> </span>extraction<span class="w"> </span>method<span class="w"> </span><span class="o">(</span><span class="s1">&#39;block&#39;</span>,<span class="w"> </span><span class="s1">&#39;line&#39;</span>,<span class="w"> </span><span class="s1">&#39;span&#39;</span><span class="o">)</span>
+<span class="w">                                      </span>-<span class="w"> </span>extract_method<span class="w"> </span><span class="o">(</span>str<span class="o">)</span>:<span class="w"> </span>Extraction<span class="w"> </span>technique.<span class="w"> </span>Defaults<span class="w"> </span>are<span class="w"> </span>smartly<span class="w"> </span>chosen<span class="w"> </span>based<span class="w"> </span>on<span class="w"> </span><span class="s1">&#39;document_type&#39;</span>.
+<span class="w">                                      </span>-<span class="w"> </span>extract_text<span class="w"> </span><span class="o">(</span>bool<span class="o">)</span>:<span class="w"> </span>Enables<span class="w"> </span>text<span class="w"> </span>extraction.<span class="w"> </span>Default:<span class="w"> </span>False.
+<span class="w">                                      </span>-<span class="w"> </span>extract_images<span class="w"> </span><span class="o">(</span>bool<span class="o">)</span>:<span class="w"> </span>Enables<span class="w"> </span>image<span class="w"> </span>extraction.<span class="w"> </span>Default:<span class="w"> </span>False.
+<span class="w">                                      </span>-<span class="w"> </span>extract_tables<span class="w"> </span><span class="o">(</span>bool<span class="o">)</span>:<span class="w"> </span>Enables<span class="w"> </span>table<span class="w"> </span>extraction.<span class="w"> </span>Default:<span class="w"> </span>False.
+
+<span class="w">                                  </span>-<span class="w"> </span>store:<span class="w"> </span>Stores<span class="w"> </span>any<span class="w"> </span>images<span class="w"> </span>extracted<span class="w"> </span>from<span class="w"> </span>documents.
+<span class="w">                                      </span>Options:
+<span class="w">                                      </span>-<span class="w"> </span>structured<span class="w"> </span><span class="o">(</span>bool<span class="o">)</span>:<span class="w">  </span>Flag<span class="w"> </span>to<span class="w"> </span>write<span class="w"> </span>extracted<span class="w"> </span>charts<span class="w"> </span>and<span class="w"> </span>tables<span class="w"> </span>to<span class="w"> </span>object<span class="w"> </span>store.<span class="w"> </span>Default:<span class="w"> </span>True.
+<span class="w">                                      </span>-<span class="w"> </span>images<span class="w"> </span><span class="o">(</span>bool<span class="o">)</span>:<span class="w"> </span>Flag<span class="w"> </span>to<span class="w"> </span>write<span class="w"> </span>extracted<span class="w"> </span>images<span class="w"> </span>to<span class="w"> </span>object<span class="w"> </span>store.<span class="w"> </span>Default:<span class="w"> </span>False.
+<span class="w">                                      </span>-<span class="w"> </span>store_method<span class="w"> </span><span class="o">(</span>str<span class="o">)</span>:<span class="w"> </span>Storage<span class="w"> </span><span class="nb">type</span><span class="w"> </span><span class="o">(</span><span class="s1">&#39;minio&#39;</span>,<span class="w"> </span><span class="o">)</span>.<span class="w"> </span>Required.
+
+<span class="w">                                  </span>-<span class="w"> </span>caption:<span class="w"> </span>Attempts<span class="w"> </span>to<span class="w"> </span>extract<span class="w"> </span>captions<span class="w"> </span><span class="k">for</span><span class="w"> </span>images<span class="w"> </span>extracted<span class="w"> </span>from<span class="w"> </span>documents.<span class="w"> </span>Note:<span class="w"> </span>this<span class="w"> </span>is<span class="w"> </span>not<span class="w"> </span>generative,<span class="w"> </span>but<span class="w"> </span>rather<span class="w"> </span>a
+<span class="w">                                      </span>simple<span class="w"> </span>extraction.
+<span class="w">                                      </span>Options:
+<span class="w">                                        </span>N/A
+
+<span class="w">                                  </span>-<span class="w"> </span>dedup:<span class="w"> </span>Idenfities<span class="w"> </span>and<span class="w"> </span>optionally<span class="w"> </span>filters<span class="w"> </span>duplicate<span class="w"> </span>images<span class="w"> </span><span class="k">in</span><span class="w"> </span>extraction.
+<span class="w">                                      </span>Options:
+<span class="w">                                        </span>-<span class="w"> </span>content_type<span class="w"> </span><span class="o">(</span>str<span class="o">)</span>:<span class="w"> </span>Content<span class="w"> </span><span class="nb">type</span><span class="w"> </span>to<span class="w"> </span>deduplicate<span class="w"> </span><span class="o">(</span><span class="s1">&#39;image&#39;</span><span class="o">)</span>
+<span class="w">                                        </span>-<span class="w"> </span>filter<span class="w"> </span><span class="o">(</span>bool<span class="o">)</span>:<span class="w"> </span>When<span class="w"> </span><span class="nb">set</span><span class="w"> </span>to<span class="w"> </span>True,<span class="w"> </span>duplicates<span class="w"> </span>will<span class="w"> </span>be<span class="w"> </span>filtered,<span class="w"> </span>otherwise,<span class="w"> </span>an<span class="w"> </span>info<span class="w"> </span>message<span class="w"> </span>will<span class="w"> </span>be<span class="w"> </span>added.
+
+<span class="w">                                  </span>-<span class="w"> </span>filter:<span class="w"> </span>Idenfities<span class="w"> </span>and<span class="w"> </span>optionally<span class="w"> </span>filters<span class="w"> </span>images<span class="w"> </span>above<span class="w"> </span>or<span class="w"> </span>below<span class="w"> </span>scale<span class="w"> </span>thresholds.
+<span class="w">                                      </span>Options:
+<span class="w">                                        </span>-<span class="w"> </span>content_type<span class="w"> </span><span class="o">(</span>str<span class="o">)</span>:<span class="w"> </span>Content<span class="w"> </span><span class="nb">type</span><span class="w"> </span>to<span class="w"> </span>deduplicate<span class="w"> </span><span class="o">(</span><span class="s1">&#39;image&#39;</span><span class="o">)</span>
+<span class="w">                                        </span>-<span class="w"> </span>min_size:<span class="w"> </span><span class="o">(</span>Union<span class="o">[</span>float,<span class="w"> </span>int<span class="o">])</span>:<span class="w"> </span>Minimum<span class="w"> </span>allowable<span class="w"> </span>size<span class="w"> </span>of<span class="w"> </span>extracted<span class="w"> </span>image.
+<span class="w">                                        </span>-<span class="w"> </span>max_aspect_ratio:<span class="w"> </span><span class="o">(</span>Union<span class="o">[</span>float,<span class="w"> </span>int<span class="o">])</span>:<span class="w"> </span>Maximum<span class="w"> </span>allowable<span class="w"> </span>aspect<span class="w"> </span>ratio<span class="w"> </span>of<span class="w"> </span>extracted<span class="w"> </span>image.
+<span class="w">                                        </span>-<span class="w"> </span>min_aspect_ratio:<span class="w"> </span><span class="o">(</span>Union<span class="o">[</span>float,<span class="w"> </span>int<span class="o">])</span>:<span class="w"> </span>Minimum<span class="w"> </span>allowable<span class="w"> </span>aspect<span class="w"> </span>ratio<span class="w"> </span>of<span class="w"> </span>extracted<span class="w"> </span>image.
+<span class="w">                                        </span>-<span class="w"> </span>filter<span class="w"> </span><span class="o">(</span>bool<span class="o">)</span>:<span class="w"> </span>When<span class="w"> </span><span class="nb">set</span><span class="w"> </span>to<span class="w"> </span>True,<span class="w"> </span>duplicates<span class="w"> </span>will<span class="w"> </span>be<span class="w"> </span>filtered,<span class="w"> </span>otherwise,<span class="w"> </span>an<span class="w"> </span>info<span class="w"> </span>message<span class="w"> </span>will<span class="w"> </span>be<span class="w"> </span>added.
+
+<span class="w">                                  </span>Note:<span class="w"> </span>The<span class="w"> </span><span class="s1">&#39;extract_method&#39;</span><span class="w"> </span>automatically<span class="w"> </span>selects<span class="w"> </span>the<span class="w"> </span>optimal<span class="w"> </span>method<span class="w"> </span>based<span class="w"> </span>on<span class="w"> </span><span class="s1">&#39;document_type&#39;</span><span class="w"> </span><span class="k">if</span><span class="w"> </span>not<span class="w"> </span>explicitly<span class="w"> </span>stated.
+<span class="w">  </span>--version<span class="w">                       </span>Show<span class="w"> </span>version.
+<span class="w">  </span>--help<span class="w">                          </span>Show<span class="w"> </span>this<span class="w"> </span>message<span class="w"> </span>and<span class="w"> </span>exit.
+</pre></div>
+</div>
+<section id="example-document-submission-to-the-nv-ingest-ms-runtime-service">
+<h1>Example document submission to the nv-ingest-ms-runtime service<a class="headerlink" href="#example-document-submission-to-the-nv-ingest-ms-runtime-service" title="Link to this heading">¶</a></h1>
+<p>Each of the following can be run from the host machine or from within the nv-ingest-ms-runtime container.</p>
+<ul class="simple">
+<li><p>Host: <code class="docutils literal notranslate"><span class="pre">nv-ingest-cli</span> <span class="pre">...</span></code></p></li>
+<li><p>Container: <code class="docutils literal notranslate"><span class="pre">nv-ingest-cli</span> <span class="pre">...</span></code></p></li>
+</ul>
+<p>Submit a text file, with no splitting.</p>
+<p><strong>Note:</strong> You will receive a response containing a single document, which is the entire text file – This is mostly
+a NO-OP, but the returned data will be wrapped in the appropriate metadata structure.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>nv-ingest-cli<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--doc<span class="w"> </span>./data/test.pdf<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--client_host<span class="o">=</span>localhost<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--client_port<span class="o">=</span><span class="m">7670</span>
+</pre></div>
+</div>
+<p>Submit a PDF file with only a splitting task.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>nv-ingest-cli<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--doc<span class="w"> </span>./data/test.pdf<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--output_directory<span class="w"> </span>./processed_docs<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--task<span class="o">=</span><span class="s1">&#39;split&#39;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--client_host<span class="o">=</span>localhost<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--client_port<span class="o">=</span><span class="m">7670</span>
+</pre></div>
+</div>
+<p>Submit a PDF file with splitting and extraction tasks.</p>
+<p><strong>Note: (TODO)</strong> This currently only works for pdfium, doughnut, and Unstructured.io; haystack, Adobe, and LlamaParse
+have existing workflows but have not been fully converted to use our unified metadata schema.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>nv-ingest-cli<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--doc<span class="w"> </span>./data/test.pdf<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--output_directory<span class="w"> </span>./processed_docs<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--task<span class="o">=</span><span class="s1">&#39;extract:{&quot;document_type&quot;: &quot;pdf&quot;, &quot;extract_method&quot;: &quot;pdfium&quot;}&#39;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--task<span class="o">=</span><span class="s1">&#39;extract:{&quot;document_type&quot;: &quot;docx&quot;, &quot;extract_method&quot;: &quot;python_docx&quot;}&#39;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--task<span class="o">=</span><span class="s1">&#39;split&#39;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--client_host<span class="o">=</span>localhost<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--client_port<span class="o">=</span><span class="m">7670</span>
+</pre></div>
+</div>
+<p>Submit a <a class="reference internal" href="#command-line-dataset-creation-with-enumeration-and-sampling"><span class="xref myst">dataset</span></a> for processing</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>nv-ingest-cli<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--dataset<span class="w"> </span>dataset.json<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--output_directory<span class="w"> </span>./processed_docs<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--task<span class="o">=</span><span class="s1">&#39;extract:{&quot;document_type&quot;: &quot;pdf&quot;, &quot;extract_method&quot;: &quot;pdfium&quot;}&#39;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--client_host<span class="o">=</span>localhost<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--client_port<span class="o">=</span><span class="m">7670</span>
+</pre></div>
+</div>
+<p>Submit a PDF file with extraction tasks and upload extracted images to MinIO.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>nv-ingest-cli<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--doc<span class="w"> </span>./data/test.pdf<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--output_directory<span class="w"> </span>./processed_docs<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--task<span class="o">=</span><span class="s1">&#39;extract:{&quot;document_type&quot;: &quot;pdf&quot;, &quot;extract_method&quot;: &quot;pdfium&quot;}&#39;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--task<span class="o">=</span><span class="s1">&#39;store:{&quot;endpoint&quot;:&quot;minio:9000&quot;,&quot;access_key&quot;:&quot;minioadmin&quot;,&quot;secret_key&quot;:&quot;minioadmin&quot;}&#39;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--client_host<span class="o">=</span>localhost<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--client_port<span class="o">=</span><span class="m">7670</span>
+</pre></div>
+</div>
+</section>
+<section id="command-line-dataset-creation-with-enumeration-and-sampling">
+<h1>Command line dataset creation with enumeration and sampling<a class="headerlink" href="#command-line-dataset-creation-with-enumeration-and-sampling" title="Link to this heading">¶</a></h1>
+<section id="gen-dataset-py">
+<h2>gen_dataset.py<a class="headerlink" href="#gen-dataset-py" title="Link to this heading">¶</a></h2>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>./src/util/gen_dataset.py<span class="w"> </span>--source_directory<span class="o">=</span>./data<span class="w"> </span>--size<span class="o">=</span>1GB<span class="w"> </span>--sample<span class="w"> </span><span class="nv">pdf</span><span class="o">=</span><span class="m">60</span><span class="w"> </span>--sample<span class="w"> </span><span class="nv">txt</span><span class="o">=</span><span class="m">40</span><span class="w"> </span>--output_file<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>dataset.json<span class="w"> </span>--validate-output
+</pre></div>
+</div>
+<p>This script samples files from a specified source directory according to defined proportions and a total size target. It
+offers options for caching the file list, outputting a sampled file list, and validating the output.</p>
+</section>
+</section>
+<section id="options">
+<h1>Options<a class="headerlink" href="#options" title="Link to this heading">¶</a></h1>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">--source_directory</span></code>: Specifies the path to the source directory where files will be scanned for sampling.</p>
+<ul>
+<li><p><strong>Type</strong>: String</p></li>
+<li><p><strong>Required</strong>: Yes</p></li>
+<li><p><strong>Example</strong>: <code class="docutils literal notranslate"><span class="pre">--source_directory</span> <span class="pre">./data</span></code></p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--size</span></code>: Defines the total size of files to sample. You can use suffixes (KB, MB, GB).</p>
+<ul>
+<li><p><strong>Type</strong>: String</p></li>
+<li><p><strong>Required</strong>: Yes</p></li>
+<li><p><strong>Example</strong>: <code class="docutils literal notranslate"><span class="pre">--size</span> <span class="pre">500MB</span></code></p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--sample</span></code>: Specifies file types and their proportions of the total size. Can be used multiple times for different
+file types.</p>
+<ul>
+<li><p><strong>Type</strong>: String</p></li>
+<li><p><strong>Required</strong>: No</p></li>
+<li><p><strong>Multiple</strong>: Yes</p></li>
+<li><p><strong>Example</strong>: <code class="docutils literal notranslate"><span class="pre">--sample</span> <span class="pre">pdf=40</span> <span class="pre">--sample</span> <span class="pre">txt=60</span></code></p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--cache_file</span></code>: If provided, caches the scanned file list as JSON at this path.</p>
+<ul>
+<li><p><strong>Type</strong>: String</p></li>
+<li><p><strong>Required</strong>: No</p></li>
+<li><p><strong>Example</strong>: <code class="docutils literal notranslate"><span class="pre">--cache_file</span> <span class="pre">./file_list_cache.json</span></code></p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--output_file</span></code>: If provided, outputs the list of sampled files as JSON at this path.</p>
+<ul>
+<li><p><strong>Type</strong>: String</p></li>
+<li><p><strong>Required</strong>: No</p></li>
+<li><p><strong>Example</strong>: <code class="docutils literal notranslate"><span class="pre">--output_file</span> <span class="pre">./sampled_files.json</span></code></p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--validate-output</span></code>: If set, the script re-validates the <code class="docutils literal notranslate"><span class="pre">output_file</span></code> JSON and logs total bytes for each file type.</p>
+<ul>
+<li><p><strong>Type</strong>: Flag</p></li>
+<li><p><strong>Required</strong>: No</p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--log-level</span></code>: Sets the logging level (‘DEBUG’, ‘INFO’, ‘WARNING’, ‘ERROR’, ‘CRITICAL’). Default is ‘INFO’.</p>
+<ul>
+<li><p><strong>Type</strong>: Choice</p></li>
+<li><p><strong>Required</strong>: No</p></li>
+<li><p><strong>Example</strong>: <code class="docutils literal notranslate"><span class="pre">--log-level</span> <span class="pre">DEBUG</span></code></p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--with-replacement</span></code>: Sample with replacement. Files can be selected multiple times.</p>
+<ul>
+<li><p><strong>Type</strong>: Flag</p></li>
+<li><p><strong>Default</strong>: True (if omitted, sampling will be with replacement)</p></li>
+<li><p><strong>Usage Example</strong>: <code class="docutils literal notranslate"><span class="pre">--with-replacement</span></code> to enable sampling with replacement or omit for default behavior.
+Use <code class="docutils literal notranslate"><span class="pre">--no-with-replacement</span></code> to disable it and sample without replacement.</p></li>
+</ul>
+</li>
+</ul>
+<p>The script performs a sampling process that respects the specified size and type proportions, generates a detailed file
+list, and provides options for caching and validation to facilitate efficient data handling and integrity checking.</p>
+</section>
+<section id="command-line-interface-for-the-image-viewer-application-displays-paginated-images-from-a-json-file">
+<h1>Command line interface for the Image Viewer application, displays paginated images from a JSON file<a class="headerlink" href="#command-line-interface-for-the-image-viewer-application-displays-paginated-images-from-a-json-file" title="Link to this heading">¶</a></h1>
+<p>viewer. Each image is resized for uniform display, and users can navigate through the images using “Next” and “Previous”
+buttons.</p>
+<section id="image-viewer-py">
+<h2>image_viewer.py<a class="headerlink" href="#image-viewer-py" title="Link to this heading">¶</a></h2>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">--file_path</span></code>: Specifies the path to the JSON file containing the images. The JSON file should contain a list of
+objects, each with an <code class="docutils literal notranslate"><span class="pre">&quot;image&quot;</span></code> field that includes a base64 encoded string of the image data.</p>
+<ul>
+<li><p><strong>Type</strong>: String</p></li>
+<li><p><strong>Required</strong>: Yes</p></li>
+<li><p><strong>Example Usage</strong>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">--</span><span class="n">file_path</span> <span class="s2">&quot;/path/to/your/images.json&quot;</span>
+</pre></div>
+</div>
+</li>
+</ul>
+</li>
+</ul>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">NV-Ingest</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="deployment.html">Launch nv-ingest micro-service(s)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="environment-config.html"><strong>Environment Configuration Variables</strong></a></li>
+<li class="toctree-l1"><a class="reference internal" href="content-metadata.html">Example text extracts for multimodal_test.pdf:</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ngc-api-key.html">Authenticating local Docker with NGC</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Example document submission to the nv-ingest-ms-runtime service</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#command-line-dataset-creation-with-enumeration-and-sampling">Command line dataset creation with enumeration and sampling</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#gen-dataset-py">gen_dataset.py</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="#options">Options</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#command-line-interface-for-the-image-viewer-application-displays-paginated-images-from-a-json-file">Command line interface for the Image Viewer application, displays paginated images from a JSON file</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#image-viewer-py">image_viewer.py</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="telemetry.html">Telemetry</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="ngc-api-key.html" title="previous chapter">Authenticating local Docker with NGC</a></li>
+      <li>Next: <a href="telemetry.html" title="next chapter">Telemetry</a></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2024, NVIDIA.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.1.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="_sources/nv-ingest_cli.md.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
